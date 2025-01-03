@@ -4,6 +4,7 @@ from typing import Annotated
 from schemas.task import Task, Params
 from dependencies.fake_data import fake_tasks
 from dependencies.util import find_task_by_id
+from database import get_db_connection
 
 
 router = APIRouter(
@@ -17,10 +18,14 @@ router = APIRouter(
     response_model=list[Task],
     status_code=status.HTTP_200_OK,
 )
-async def get_tasks(
-    tasks: Annotated[dict[int, Task], Depends(fake_tasks)],
-):
-    return [task for task in tasks.values()]
+async def get_tasks():
+    cursor = get_db_connection().cursor()
+    query_res = cursor.execute("select * from Tasks;").fetchall()
+    tasks = [
+        Task(id=task[0], name=task[1], pomodoro_count=task[2], category_id=task[3])
+        for task in query_res
+    ]
+    return tasks
 
 
 @router.get("/{task_id}")
@@ -35,22 +40,38 @@ async def get_task_by_id(
     status_code=status.HTTP_201_CREATED,
 )
 async def create_task(
-    params: Params,
-    tasks: Annotated[dict[int, Task], Depends(fake_tasks)],
+    task: Task,
 ):
-    task_id = max(tasks, default=0) + 1
-    task = Task(id=task_id, **params.model_dump())
-    tasks[task_id] = task
-    return {"message": f"'{task}' task has been created"}
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "insert into Tasks (name, pomodoro_count, category_id) values(?,?,?)",
+        (task.name, task.pomodoro_count, task.category_id),
+    )
+    conn.commit()
+    conn.close()
+    return task
 
 
-@router.patch("/{task_id}")
+@router.patch(
+    "/{task_id}",
+    response_model=Task,
+    status_code=status.HTTP_200_OK,
+)
 async def update_task(
-    params: Params,
-    task: Annotated[Task, Depends(find_task_by_id)],
+    task_id: int,
+    name: str,
 ):
-    task.__dict__.update(**params.model_dump(exclude_none=True))
-    return {"task": task}
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "update Tasks set name=? where id=?",
+        (name, task_id),
+    )
+    conn.commit()
+    task = cursor.execute("select * from Tasks where id=?", (task_id,)).fetchone()
+    conn.close()
+    return Task(id=task[0], name=task[1], pomodoro_count=task[2], category_id=task[3])
 
 
 @router.delete(
@@ -58,8 +79,14 @@ async def update_task(
     status_code=status.HTTP_204_NO_CONTENT,
 )
 async def delete_task(
-    task: Annotated[Task, Depends(find_task_by_id)],
-    tasks: Annotated[dict[int, Task], Depends(fake_tasks)],
+    task_id: int,
 ):
-    tasks.pop(task.id)
-    return {"task": task}
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "delete from Tasks where id=?",
+        (task_id,),
+    )
+    conn.commit()
+    conn.close()
+    return {"message": f"task {task_id} deleted successfully"}
