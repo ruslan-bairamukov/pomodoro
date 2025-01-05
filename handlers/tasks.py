@@ -4,7 +4,7 @@ from typing import Annotated
 from schemas.task import Task, Params
 from dependencies.fake_data import fake_tasks
 from dependencies.util import find_task_by_id
-from database import get_db_connection
+from models.db_helper import get_db_connection
 
 
 router = APIRouter(
