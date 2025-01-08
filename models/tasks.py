@@ -1,10 +1,11 @@
-from sqlalchemy.orm import DeclarativeMeta, Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column
+
+from models.base import Base
 
 
-class Tasks(DeclarativeMeta):
-    __tablename__ = "Tasks"
+class Tasks(Base):
+    __tablename__ = "tasks"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str]
     pomodoro_count: Mapped[int]
     category_id: Mapped[int]
