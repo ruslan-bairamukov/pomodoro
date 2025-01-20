@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
 
-from config.settings import settings
+from config.config import settings
 
 
 router = APIRouter(

@@ -1,18 +1,25 @@
-[tool.poetry]
+[project]
 name = "pomodoro"
 version = "0.1.0"
-description = ""
-authors = ["Your Name <you@example.com>"]
+description = "Add your description here"
 readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "alembic>=1.14.0",
+    "fastapi>=0.115.6",
+    "psycopg2>=2.9.10",
+    "pydantic>=2.10.4",
+    "pydantic-settings>=2.7.1",
+    "redis>=5.2.1",
+    "ruff>=0.8.6",
+    "sqlalchemy>=2.0.36",
+    "uvicorn>=0.34.0",
+]
 
-[tool.poetry.dependencies]
-python = "^3.12"
-fastapi = "^0.115.3"
-uvicorn = "^0.32.0"
-pydantic = "^2.9.2"
-pydantic-settings = "^2.6.1"
+[dependency-groups]
+dev = [
+    "pytest>=8.3.4",
+]
 
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+[tool.pytest.ini_options]
+pythonpath = "."

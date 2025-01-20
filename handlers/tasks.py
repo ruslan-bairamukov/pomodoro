@@ -1,10 +1,18 @@
-from fastapi import APIRouter, Depends, status
 from typing import Annotated
 
-from schemas.task import Task, Params
-from dependencies.fake_data import fake_tasks
-from dependencies.util import find_task_by_id
+from fastapi import APIRouter, Depends, status
 
+from data_access.db_helper import db_helper
+from dependencies.dependencies import (
+    get_tasks_repository,
+    get_tasks_service,
+)
+
+# from dependencies.fake_data import fake_tasks
+# from dependencies.util import find_task_by_id
+from repository import TaskRepository
+from schemas.task import TaskSchema
+from service import TaskService
 
 router = APIRouter(
     prefix="/tasks",
@@ -12,45 +20,70 @@ router = APIRouter(
 )
 
 
+get_db_connection = db_helper.session_factory
+
+
 @router.get(
     "/all",
-    response_model=list[Task],
+    response_model=list[TaskSchema],
     status_code=status.HTTP_200_OK,
 )
 async def get_tasks(
-    tasks: Annotated[dict[int, Task], Depends(fake_tasks)],
-):
-    return [task for task in tasks.values()]
+    task_service: Annotated[
+        TaskService, Depends(get_tasks_service)
+    ],
+) -> list[TaskSchema]:
+    return task_service.get_tasks()
 
 
-@router.get("/{task_id}")
+@router.get(
+    "/{task_id}",
+    response_model=TaskSchema,
+    status_code=status.HTTP_200_OK,
+)
 async def get_task_by_id(
-    task: Annotated[Task, Depends(find_task_by_id)],
+    task_id: int,
+    task_repository: Annotated[
+        TaskRepository, Depends(get_tasks_repository)
+    ],
 ):
-    return {"task": task}
+    task = task_repository.get_task_by_id(task_id)
+    return task
 
 
 @router.post(
     "/",
+    response_model=TaskSchema,
     status_code=status.HTTP_201_CREATED,
 )
 async def create_task(
-    params: Params,
-    tasks: Annotated[dict[int, Task], Depends(fake_tasks)],
+    task_in: TaskSchema,
+    task_repository: Annotated[
+        TaskRepository, Depends(get_tasks_repository)
+    ],
 ):
-    task_id = max(tasks, default=0) + 1
-    task = Task(id=task_id, **params.model_dump())
-    tasks[task_id] = task
-    return {"message": f"'{task}' task has been created"}
+    task_model = task_repository.create_task(task_in)
+    task = TaskSchema.model_validate(task_model)
+    return task
 
 
-@router.patch("/{task_id}")
+@router.patch(
+    "/{task_id}",
+    response_model=TaskSchema,
+    status_code=status.HTTP_200_OK,
+)
 async def update_task(
-    params: Params,
-    task: Annotated[Task, Depends(find_task_by_id)],
+    task_id: int,
+    task_update: TaskSchema,
+    task_repository: Annotated[
+        TaskRepository, Depends(get_tasks_repository)
+    ],
 ):
-    task.__dict__.update(**params.model_dump(exclude_none=True))
-    return {"task": task}
+    task_model = task_repository.update_task(
+        task_id, task_update
+    )
+    task = TaskSchema.model_validate(task_model)
+    return task
 
 
 @router.delete(
@@ -58,8 +91,12 @@ async def update_task(
     status_code=status.HTTP_204_NO_CONTENT,
 )
 async def delete_task(
-    task: Annotated[Task, Depends(find_task_by_id)],
-    tasks: Annotated[dict[int, Task], Depends(fake_tasks)],
+    task_id: int,
+    task_repository: Annotated[
+        TaskRepository, Depends(get_tasks_repository)
+    ],
 ):
-    tasks.pop(task.id)
-    return {"task": task}
+    task_repository.delete_task(task_id)
+    return {
+        "message": f"task {task_id} deleted successfully"
+    }
