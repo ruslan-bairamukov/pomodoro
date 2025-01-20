@@ -1,11 +1,18 @@
-from fastapi import APIRouter, Depends, status
 from typing import Annotated
 
-from schemas.task import Task, Params
-from dependencies.fake_data import fake_tasks
-from dependencies.util import find_task_by_id
-from data_access.db_helper import get_db_connection
+from fastapi import APIRouter, Depends, status
 
+from data_access.db_helper import db_helper
+from dependencies.dependencies import (
+    get_tasks_repository,
+    get_tasks_service,
+)
+
+# from dependencies.fake_data import fake_tasks
+# from dependencies.util import find_task_by_id
+from repository import TaskRepository
+from schemas.task import TaskSchema
+from service import TaskService
 
 router = APIRouter(
     prefix="/tasks",
@@ -13,65 +20,70 @@ router = APIRouter(
 )
 
 
+get_db_connection = db_helper.session_factory
+
+
 @router.get(
     "/all",
-    response_model=list[Task],
+    response_model=list[TaskSchema],
     status_code=status.HTTP_200_OK,
 )
-async def get_tasks():
-    cursor = get_db_connection().cursor()
-    query_res = cursor.execute("select * from Tasks;").fetchall()
-    tasks = [
-        Task(id=task[0], name=task[1], pomodoro_count=task[2], category_id=task[3])
-        for task in query_res
-    ]
-    return tasks
+async def get_tasks(
+    task_service: Annotated[
+        TaskService, Depends(get_tasks_service)
+    ],
+) -> list[TaskSchema]:
+    return task_service.get_tasks()
 
 
-@router.get("/{task_id}")
+@router.get(
+    "/{task_id}",
+    response_model=TaskSchema,
+    status_code=status.HTTP_200_OK,
+)
 async def get_task_by_id(
-    task: Annotated[Task, Depends(find_task_by_id)],
+    task_id: int,
+    task_repository: Annotated[
+        TaskRepository, Depends(get_tasks_repository)
+    ],
 ):
-    return {"task": task}
+    task = task_repository.get_task_by_id(task_id)
+    return task
 
 
 @router.post(
     "/",
+    response_model=TaskSchema,
     status_code=status.HTTP_201_CREATED,
 )
 async def create_task(
-    task: Task,
+    task_in: TaskSchema,
+    task_repository: Annotated[
+        TaskRepository, Depends(get_tasks_repository)
+    ],
 ):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        "insert into Tasks (name, pomodoro_count, category_id) values(?,?,?)",
-        (task.name, task.pomodoro_count, task.category_id),
-    )
-    conn.commit()
-    conn.close()
+    task_model = task_repository.create_task(task_in)
+    task = TaskSchema.model_validate(task_model)
     return task
 
 
 @router.patch(
     "/{task_id}",
-    response_model=Task,
+    response_model=TaskSchema,
     status_code=status.HTTP_200_OK,
 )
 async def update_task(
     task_id: int,
-    name: str,
+    task_update: TaskSchema,
+    task_repository: Annotated[
+        TaskRepository, Depends(get_tasks_repository)
+    ],
 ):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        "update Tasks set name=? where id=?",
-        (name, task_id),
+    task_model = task_repository.update_task(
+        task_id, task_update
     )
-    conn.commit()
-    task = cursor.execute("select * from Tasks where id=?", (task_id,)).fetchone()
-    conn.close()
-    return Task(id=task[0], name=task[1], pomodoro_count=task[2], category_id=task[3])
+    task = TaskSchema.model_validate(task_model)
+    return task
 
 
 @router.delete(
@@ -80,13 +92,11 @@ async def update_task(
 )
 async def delete_task(
     task_id: int,
+    task_repository: Annotated[
+        TaskRepository, Depends(get_tasks_repository)
+    ],
 ):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        "delete from Tasks where id=?",
-        (task_id,),
-    )
-    conn.commit()
-    conn.close()
-    return {"message": f"task {task_id} deleted successfully"}
+    task_repository.delete_task(task_id)
+    return {
+        "message": f"task {task_id} deleted successfully"
+    }

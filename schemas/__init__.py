@@ -1,5 +1,5 @@
-from schemas.task import Task
+from schemas.task import TaskSchema
 
 __all__ = [
-    "Task",
+    "TaskSchema",
 ]

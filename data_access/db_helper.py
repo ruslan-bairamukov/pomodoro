@@ -1,6 +1,7 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import scoped_session, sessionmaker, Session
 from collections.abc import Generator
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session, scoped_session, sessionmaker
 
 from config.config import settings
 
@@ -32,8 +33,8 @@ class DatabaseHelper:
 
 
 db_helper = DatabaseHelper(
-    url=settings.db.url,
-    echo=settings.db.echo,
+    url=settings.ASYNC_DB.URL,
+    echo=settings.ASYNC_DB.ECHO,
 )
 
 
