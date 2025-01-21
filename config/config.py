@@ -1,62 +1,80 @@
 from pathlib import Path
 
-from pydantic import BaseModel
+from pydantic import SecretStr
 from pydantic_settings import (
     BaseSettings,
     SettingsConfigDict,
 )
 
-
-class DbSettings(BaseModel):
-    DIALECT: str = "sqlite"
-    DRIVER: str = "pysqlite"
-    PATH: Path = (
-        Path(__file__).resolve().parent.parent
-        / "pomodoro.db"
-    )
-    URL: str = f"{DIALECT}+{DRIVER}:///{PATH}"
-    ECHO: bool = True
+BASE_DIR: Path = Path(__file__).resolve().parent.parent
+BASE_MODEL_CONFIG = SettingsConfigDict(
+    env_file=BASE_DIR / ".local.env",
+    env_file_encoding="utf-8",
+    extra="ignore",
+)
 
 
-class AsyncDbSettings(BaseModel):
-    DIALECT: str = "postgresql"
-    DRIVER: str = "psycopg2"  # "asyncpg"
-    URL: str = f"{DIALECT}+{DRIVER}://postgres:superSECRETpassword@192.168.1.84:15432/pomodoro"
-    ECHO: bool = False
+class SQLITEDbSettings(BaseSettings):
+    model_config = BASE_MODEL_CONFIG
+
+    SQLITE_DIALECT: str
+    SQLITE_DRIVER: str
+    ECHO: bool
+    SQLITE_PATH: Path = BASE_DIR / "pomodoro.db"
+
+    @property
+    def url(self) -> str:
+        return f"{self.SQLITE_DIALECT}+{self.SQLITE_DRIVER}:///{self.SQLITE_PATH}"
 
 
-class RedisSettings(BaseModel):
-    HOST: str = "192.168.1.84"
-    PORT: int = 36379
-    DB: int = 0
-    PASSWORD: str = ""
-    USERNAME: str = "default"
-    URL: str = (
-        f"redis://{USERNAME}:{PASSWORD}@{HOST}:{PORT}/{DB}"
-    )
+class PSQLDbSettings(BaseSettings):
+    model_config = BASE_MODEL_CONFIG
+
+    PSQL_DIALECT: str
+    PSQL_DRIVER: str
+    PSQL_ECHO: bool
+    PSQL_HOST: str
+    PSQL_NAME: str
+    PSQL_PORT: int
+    PSQL_USER: str
+    PSQL_USER_PASSWORD: str
+
+    @property
+    def url(self) -> str:
+        return f"{self.PSQL_DIALECT}+{self.PSQL_DRIVER}://{self.PSQL_USER}:{self.PSQL_USER_PASSWORD}@{self.PSQL_HOST}:{self.PSQL_PORT}/{self.PSQL_NAME}"
 
 
-class AuthJWT(BaseModel):
-    SECRET_KEY: str = ""
-    ALGORITHM: str = "HS256"
+class RedisSettings(BaseSettings):
+    model_config = BASE_MODEL_CONFIG
+
+    REDIS_HOST: str
+    REDIS_PORT: int
+    # REDIS_DB: int
+    # REDIS_USERNAME: str
+    # REDIS_USER_PASSWORD: SecretStr
+
+    @property
+    def url(self) -> str:
+        return (
+            f"redis://@{self.REDIS_HOST}:{self.REDIS_PORT}"
+        )
+
+
+class AuthJWT(BaseSettings):
+    model_config = BASE_MODEL_CONFIG
+
+    SECRET_KEY: SecretStr
+    ALGORITHM: str
 
 
 class Settings(BaseSettings):
-    GOOGLE_TOKEN_ID: str = "2803463467272300832"
-    ASYNC_DB: AsyncDbSettings = AsyncDbSettings()
-    AUTH_JWT: AuthJWT = AuthJWT()
-    DB: DbSettings = DbSettings()
-    REDIS: RedisSettings = RedisSettings()
+    model_config = BASE_MODEL_CONFIG
 
-    model_config = SettingsConfigDict(env_file=".dev.env")
+    GOOGLE_TOKEN_ID: SecretStr
+    AUTH_JWT: AuthJWT = AuthJWT()
+    PSQL_DB: PSQLDbSettings = PSQLDbSettings()
+    SQLITEDB: SQLITEDbSettings = SQLITEDbSettings()
+    REDIS: RedisSettings = RedisSettings()
 
 
 settings = Settings()
-
-
-# class DbSettings(BaseModel):
-#     DIALECT: str = "sqlite"
-#     DRIVER: str = "pysqlite"
-#     PATH: Path = Path(__file__).resolve().parent.parent / "pomodoro.db"
-#     URL: str = f"{DIALECT}+{DRIVER}:///{PATH}"
-#     ECHO: bool = True

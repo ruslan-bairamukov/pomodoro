@@ -8,23 +8,23 @@ class CacheHelper:
         self,
         host: str,
         port: int,
-        db: int,
-        username: str,
-        password: str,
+        # db: int,
+        # username: str,
+        # password: str,
     ) -> None:
         self.host = host
         self.port = port
-        self.db = db
-        self.username = username
-        self.password = password
+        # self.db = db
+        # self.username = username
+        # self.password = password
 
     def get_redis(self) -> redis.Redis:
         return redis.Redis(
             host=self.host,
             port=self.port,
-            db=self.db,
-            username=self.username,
-            password=self.password,
+            # db=self.db,
+            # username=self.username,
+            # password=self.password,
         )
 
     def set_pomo(self) -> int:
@@ -38,8 +38,8 @@ class CacheHelper:
 
     def test_connection(self) -> None:
         try:
-            r = self.get_redis()
-            # r = redis.Redis(host='192.168.1.84', port=36379)
+            # r = self.get_redis()
+            r = redis.Redis(host="192.168.1.73", port=36379)
             # r = redis.Redis(host='localhost', port=16379, db=0, username='redis', password='superSECRETpassword')
             # r = redis.Redis.from_url("redis://127.0.0.1:36379/0")
             # url="redis://default:@0.0.0.0:16379/0"
@@ -55,9 +55,9 @@ class CacheHelper:
 
 
 cache_helper = CacheHelper(
-    host=settings.REDIS.HOST,
-    port=settings.REDIS.PORT,
-    db=settings.REDIS.DB,
-    username=settings.REDIS.USERNAME,
-    password=settings.REDIS.PASSWORD,
+    host=settings.REDIS.REDIS_HOST,
+    port=settings.REDIS.REDIS_PORT,
+    # db=settings.REDIS.REDIS_DB,
+    # username=settings.REDIS.REDIS_USERNAME,
+    # password=settings.REDIS.REDIS_USER_PASSWORD,
 )

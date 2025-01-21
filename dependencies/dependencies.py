@@ -2,8 +2,8 @@ from typing import Annotated
 
 from fastapi import Depends
 
-from cache_access.cache_helper import cache_helper
-from data_access.db_helper import db_helper
+from cache_access import cache_helper
+from data_access import db_helper
 from repository import TaskCache, TaskRepository
 from service import TaskService
 

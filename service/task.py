@@ -20,5 +20,6 @@ class TaskService:
                 TaskSchema.model_validate(task_model)
                 for task_model in tasks_model
             ]
-            self.task_cache.set_tasks(tasks_schema)
+            if tasks_schema:
+                self.task_cache.set_tasks(tasks_schema)
         return tasks_schema

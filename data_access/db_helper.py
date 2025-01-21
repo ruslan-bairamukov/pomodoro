@@ -1,13 +1,19 @@
 from collections.abc import Generator
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, scoped_session, sessionmaker
+from sqlalchemy.orm import (
+    Session,
+    scoped_session,
+    sessionmaker,
+)
 
-from config.config import settings
+from config import settings
 
 
 class DatabaseHelper:
-    def __init__(self, url: str, echo: bool = False) -> None:
+    def __init__(
+        self, url: str, echo: bool = False
+    ) -> None:
         self.engine = create_engine(
             url=url,
             echo=echo,
@@ -26,15 +32,17 @@ class DatabaseHelper:
         )
         return session
 
-    def session_dependency(self) -> Generator[Session, None]:
+    def session_dependency(
+        self,
+    ) -> Generator[Session, None]:
         with self.session_factory() as sess:
             yield sess
             # sess.close()
 
 
 db_helper = DatabaseHelper(
-    url=settings.ASYNC_DB.URL,
-    echo=settings.ASYNC_DB.ECHO,
+    url=settings.PSQL_DB.url,
+    echo=settings.PSQL_DB.PSQL_ECHO,
 )
 
 

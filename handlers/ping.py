@@ -1,8 +1,6 @@
 from fastapi import APIRouter
 
-
-from config.config import settings
-
+from config import settings
 
 router = APIRouter(
     prefix="/ping",
