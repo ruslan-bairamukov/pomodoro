@@ -2,7 +2,6 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, status
 
-from data_access.db_helper import db_helper
 from dependencies.dependencies import (
     get_tasks_repository,
     get_tasks_service,
@@ -11,16 +10,13 @@ from dependencies.dependencies import (
 # from dependencies.fake_data import fake_tasks
 # from dependencies.util import find_task_by_id
 from repository import TaskRepository
-from schemas.task import TaskSchema
+from schemas import TaskSchema
 from service import TaskService
 
 router = APIRouter(
     prefix="/tasks",
     tags=["task"],
 )
-
-
-get_db_connection = db_helper.session_factory
 
 
 @router.get(

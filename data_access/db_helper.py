@@ -26,18 +26,18 @@ class DatabaseHelper:
         )
 
     # check the explanation bellow
-    def get_scoped_session(self) -> Session:
+    def get_scoped_db_session(self) -> Session:
         session = scoped_session(
             session_factory=self.session_factory,
         )
         return session
 
-    def session_dependency(
+    def get_db_session(
         self,
     ) -> Generator[Session, None]:
-        with self.session_factory() as sess:
-            yield sess
-            # sess.close()
+        with self.session_factory() as session:
+            yield session
+            # session.close()
 
 
 db_helper = DatabaseHelper(
