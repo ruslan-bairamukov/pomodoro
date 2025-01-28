@@ -1,6 +1,10 @@
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from typing import Any
 
-from pydantic import SecretStr
+from cryptography.hazmat.primitives import serialization
+from cryptography.x509 import load_pem_x509_certificate
+from pydantic import SecretStr, computed_field
 from pydantic_settings import (
     BaseSettings,
     SettingsConfigDict,
@@ -63,8 +67,59 @@ class RedisSettings(BaseSettings):
 class AuthJWT(BaseSettings):
     model_config = BASE_MODEL_CONFIG
 
-    SECRET_KEY: SecretStr
+    ISSUER: str
+    SUBJECT: str | None = None
+    AUDIENCE: str
+    EXPIRE_DELTA: timedelta = timedelta(minutes=30)
+    SCOPE: str
     ALGORITHM: str
+    TOKEN_TYPE: str
+    KID: str
+
+    @computed_field
+    @property
+    def payload(self) -> dict[str, Any]:
+        iat = datetime.now(tz=timezone.utc)
+        return {
+            "iss": self.ISSUER,
+            "sub": self.SUBJECT,
+            "aud": self.AUDIENCE,
+            "iat": iat,
+            "exp": iat + self.EXPIRE_DELTA,
+            "scope": self.SCOPE,
+        }
+
+    @computed_field
+    @property
+    def headers(self) -> dict[str, Any]:
+        return {
+            "alg": self.ALGORITHM,
+            "typ": self.TOKEN_TYPE,
+            "kid": self.KID,
+        }
+
+    @computed_field
+    @property
+    def private_key(
+        self,
+        keypath: str = ".certs/private_key.pem",
+    ) -> str:
+        private_key_text = (BASE_DIR / keypath).read_text()
+        return serialization.load_pem_private_key(
+            private_key_text.encode(encoding="utf-8"),
+            password=None,
+        )
+
+    @computed_field
+    @property
+    def public_key(
+        self,
+        keypath: str = ".certs/public_key.pem",
+    ) -> str:
+        public_key_text = (BASE_DIR / keypath).read_text()
+        return load_pem_x509_certificate(
+            public_key_text.encode("utf-8")
+        ).public_key()
 
 
 class Settings(BaseSettings):

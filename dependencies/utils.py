@@ -1,18 +1,22 @@
-from typing import Annotated
+from typing import Annotated, Any
 
-from fastapi import Depends
+import jwt
+from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
 from redis import Redis
 from sqlalchemy.orm import Session
 
 from cache_access import cache_helper
 from data_access import db_helper
-from repository import TaskCache, TaskRepository
-from service import (
-    AuthService,
-    TaskService,
+from exceptions import InvalidJWTTokenError
+from repository import (
+    TaskCache,
+    TaskRepository,
     UserRepository,
-    UserService,
 )
+from service import AuthService, TaskService, UserService
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 
 
 def get_tasks_repository(
@@ -59,17 +63,6 @@ def get_user_repository(
     )
 
 
-def get_user_service(
-    user_repository: Annotated[
-        UserRepository,
-        Depends(get_user_repository),
-    ],
-):
-    return UserService(
-        user_repository=user_repository,
-    )
-
-
 def get_auth_service(
     user_repository: Annotated[
         UserRepository,
@@ -79,3 +72,47 @@ def get_auth_service(
     return AuthService(
         user_repository=user_repository,
     )
+
+
+def get_user_service(
+    user_repository: Annotated[
+        UserRepository,
+        Depends(get_user_repository),
+    ],
+    auth_service: Annotated[
+        AuthService, Depends(get_auth_service)
+    ],
+):
+    return UserService(
+        user_repository=user_repository,
+        auth_service=auth_service,
+    )
+
+
+def get_jwt_payload(
+    token: Annotated[
+        OAuth2PasswordBearer, Depends(oauth2_scheme)
+    ],
+    auth_service: Annotated[
+        AuthService, Depends(get_auth_service)
+    ],
+) -> dict[str, Any]:
+    try:
+        return auth_service.validate_jwt(token=token)
+    except jwt.PyJWTError:
+        raise InvalidJWTTokenError
+
+
+def get_current_user_id(
+    payload: Annotated[
+        dict[str, Any], Depends(get_jwt_payload)
+    ],
+) -> int:
+    try:
+        user_id = int(payload.get("sub"))
+    except InvalidJWTTokenError as error:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=error.message,
+        )
+    return user_id

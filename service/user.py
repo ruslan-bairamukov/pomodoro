@@ -1,46 +1,60 @@
-import random
-import string
+from passlib.context import CryptContext
 
 from repository import UserRepository
 from schemas import (
     UserInSchema,
-    UserOutSchema,
+    UserLoginSchema,
     UserProfileSchema,
 )
+from service import AuthService
 
 
 class UserService:
     def __init__(
         self,
         user_repository: UserRepository,
+        auth_service: AuthService,
     ) -> None:
         self.user_repository = user_repository
+        self.auth_service = auth_service
+        self.password_context: CryptContext = CryptContext(
+            schemes=["bcrypt"],
+            deprecated="auto",
+        )
 
     def create_user(
         self,
         user_in: UserInSchema,
-    ) -> UserOutSchema:
-        access_token = self._generate_access_token()
-        user_profile = UserProfileSchema(
-            username=user_in.username,
-            password=user_in.password,
-            access_token=access_token,
+    ) -> UserLoginSchema:
+        user_profile = self._create_user_profile(
+            user_in=user_in
         )
         user_profile_model = (
             self.user_repository.create_user(
                 user_profile=user_profile,
             )
         )
-        return UserOutSchema.model_validate(
-            user_profile_model
+        access_token = self.auth_service.generate_jwt(
+            user_id=user_profile_model.id
+        )
+        return UserLoginSchema(
+            id=user_profile_model.id,
+            access_token=access_token,
         )
 
-    def _generate_access_token(self) -> str:
-        str_sequence = (
-            string.ascii_uppercase
-            + string.digits
-            + string.printable
+    def _create_user_profile(
+        self,
+        user_in: UserInSchema,
+    ) -> UserProfileSchema:
+        hashed_password = self._get_password_hash(
+            password=user_in.password
         )
-        return "".join(
-            random.choice(str_sequence) for _ in range(21)
+        return UserProfileSchema(
+            username=user_in.username,
+            hashed_password=hashed_password,
         )
+
+    def _get_password_hash(
+        self, password: str | bytes
+    ) -> str:
+        return self.password_context.hash(password)

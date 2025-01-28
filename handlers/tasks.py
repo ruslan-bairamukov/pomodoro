@@ -1,22 +1,28 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    status,
+)
+from fastapi.security import OAuth2PasswordBearer
 
-from dependencies.dependencies import (
-    get_tasks_repository,
+from dependencies import (
+    get_current_user_id,
     get_tasks_service,
 )
-
-# from dependencies.fake_data import fake_tasks
-# from dependencies.util import find_task_by_id
-from repository import TaskRepository
-from schemas import TaskSchema
+from exceptions import TaskNotFoundError
+from schemas import TaskCreateSchema, TaskSchema
 from service import TaskService
 
 router = APIRouter(
     prefix="/tasks",
     tags=["task"],
 )
+
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 
 
 @router.get(
@@ -28,8 +34,10 @@ async def get_tasks(
     task_service: Annotated[
         TaskService, Depends(get_tasks_service)
     ],
+    user_id: Annotated[int, Depends(get_current_user_id)],
 ) -> list[TaskSchema]:
-    return task_service.get_tasks()
+    tasks = task_service.get_tasks(user_id=user_id)
+    return tasks
 
 
 @router.get(
@@ -39,11 +47,21 @@ async def get_tasks(
 )
 async def get_task_by_id(
     task_id: int,
-    task_repository: Annotated[
-        TaskRepository, Depends(get_tasks_repository)
+    task_service: Annotated[
+        TaskService, Depends(get_tasks_service)
     ],
-):
-    task = task_repository.get_task_by_id(task_id)
+    user_id: Annotated[int, Depends(get_current_user_id)],
+) -> TaskSchema:
+    try:
+        task = task_service.get_task_by_id(
+            task_id=task_id,
+            user_id=user_id,
+        )
+    except TaskNotFoundError as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=error.message,
+        )
     return task
 
 
@@ -53,13 +71,15 @@ async def get_task_by_id(
     status_code=status.HTTP_201_CREATED,
 )
 async def create_task(
-    task_in: TaskSchema,
-    task_repository: Annotated[
-        TaskRepository, Depends(get_tasks_repository)
+    task_in: TaskCreateSchema,
+    task_service: Annotated[
+        TaskService, Depends(get_tasks_service)
     ],
+    user_id: Annotated[int, Depends(get_current_user_id)],
 ):
-    task_model = task_repository.create_task(task_in)
-    task = TaskSchema.model_validate(task_model)
+    task = task_service.create_task(
+        task_in=task_in, user_id=user_id
+    )
     return task
 
 
@@ -70,15 +90,23 @@ async def create_task(
 )
 async def update_task(
     task_id: int,
-    task_update: TaskSchema,
-    task_repository: Annotated[
-        TaskRepository, Depends(get_tasks_repository)
+    task_update: TaskCreateSchema,
+    task_service: Annotated[
+        TaskService, Depends(get_tasks_service)
     ],
+    user_id: Annotated[int, Depends(get_current_user_id)],
 ):
-    task_model = task_repository.update_task(
-        task_id, task_update
-    )
-    task = TaskSchema.model_validate(task_model)
+    try:
+        task = task_service.update_task(
+            task_id=task_id,
+            task_update=task_update,
+            user_id=user_id,
+        )
+    except TaskNotFoundError as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=error.message,
+        )
     return task
 
 
@@ -88,11 +116,18 @@ async def update_task(
 )
 async def delete_task(
     task_id: int,
-    task_repository: Annotated[
-        TaskRepository, Depends(get_tasks_repository)
+    task_service: Annotated[
+        TaskService, Depends(get_tasks_service)
     ],
-):
-    task_repository.delete_task(task_id)
-    return {
-        "message": f"task {task_id} deleted successfully"
-    }
+    user_id: Annotated[int, Depends(get_current_user_id)],
+) -> None:
+    try:
+        task_service.delete_task(
+            task_id=task_id,
+            user_id=user_id,
+        )
+    except TaskNotFoundError as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=error.message,
+        )

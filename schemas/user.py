@@ -8,12 +8,15 @@ class UserInSchema(BaseModel):
     password: str
 
 
-class UserProfileSchema(UserInSchema):
+class UserProfileSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int | None = None
-    access_token: str | None = None
+    username: str
+    hashed_password: str
 
 
-class UserOutSchema(BaseModel):
+class UserLoginSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
