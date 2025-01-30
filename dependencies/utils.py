@@ -24,7 +24,7 @@ from service import AuthService, TaskService, UserService
 oauth2_scheme = HTTPBearer()
 
 
-def get_tasks_repository(
+async def get_tasks_repository(
     db_session: Annotated[
         Session, Depends(db_helper.get_db_session)
     ],
@@ -34,7 +34,7 @@ def get_tasks_repository(
     )
 
 
-def get_tasks_cache(
+async def get_tasks_cache(
     redis: Annotated[
         Redis, Depends(cache_helper.get_redis)
     ],
@@ -44,7 +44,7 @@ def get_tasks_cache(
     )
 
 
-def get_tasks_service(
+async def get_tasks_service(
     task_repository: Annotated[
         TaskRepository, Depends(get_tasks_repository)
     ],
@@ -58,7 +58,7 @@ def get_tasks_service(
     )
 
 
-def get_user_repository(
+async def get_user_repository(
     db_session: Annotated[
         Session, Depends(db_helper.get_db_session)
     ],
@@ -68,15 +68,15 @@ def get_user_repository(
     )
 
 
-def get_google_client() -> GoogleClient:
+async def get_google_client() -> GoogleClient:
     return GoogleClient(settings=settings)
 
 
-def get_yandex_client() -> YandexClient:
+async def get_yandex_client() -> YandexClient:
     return YandexClient(settings=settings)
 
 
-def get_auth_service(
+async def get_auth_service(
     user_repository: Annotated[
         UserRepository,
         Depends(get_user_repository),
@@ -85,7 +85,7 @@ def get_auth_service(
     return AuthService(user_repository=user_repository)
 
 
-def get_user_service(
+async def get_user_service(
     user_repository: Annotated[
         UserRepository,
         Depends(get_user_repository),
@@ -100,7 +100,7 @@ def get_user_service(
     )
 
 
-def get_jwt_payload(
+async def get_jwt_payload(
     token: Annotated[
         OAuth2PasswordBearer, Depends(oauth2_scheme)
     ],
@@ -109,14 +109,14 @@ def get_jwt_payload(
     ],
 ) -> dict[str, Any]:
     try:
-        return auth_service.validate_jwt(
+        return await auth_service.validate_jwt(
             token=token.credentials
         )
     except jwt.PyJWTError:
         raise InvalidJWTTokenError
 
 
-def get_current_user_id(
+async def get_current_user_id(
     payload: Annotated[
         dict[str, Any], Depends(get_jwt_payload)
     ],

@@ -32,7 +32,7 @@ async def get_tasks(
     ],
     user_id: Annotated[int, Depends(get_current_user_id)],
 ) -> list[TaskSchema]:
-    tasks = task_service.get_tasks(user_id=user_id)
+    tasks = await task_service.get_tasks(user_id=user_id)
     return tasks
 
 
@@ -49,7 +49,7 @@ async def get_task_by_id(
     user_id: Annotated[int, Depends(get_current_user_id)],
 ) -> TaskSchema:
     try:
-        task = task_service.get_task_by_id(
+        task = await task_service.get_task_by_id(
             task_id=task_id,
             user_id=user_id,
         )
@@ -73,7 +73,7 @@ async def create_task(
     ],
     user_id: Annotated[int, Depends(get_current_user_id)],
 ):
-    task = task_service.create_task(
+    task = await task_service.create_task(
         task_in=task_in, user_id=user_id
     )
     return task
@@ -93,7 +93,7 @@ async def update_task(
     user_id: Annotated[int, Depends(get_current_user_id)],
 ):
     try:
-        task = task_service.update_task(
+        task = await task_service.update_task(
             task_id=task_id,
             task_update=task_update,
             user_id=user_id,
@@ -118,7 +118,7 @@ async def delete_task(
     user_id: Annotated[int, Depends(get_current_user_id)],
 ) -> None:
     try:
-        task_service.delete_task(
+        await task_service.delete_task(
             task_id=task_id,
             user_id=user_id,
         )

@@ -28,21 +28,21 @@ class AuthService:
             deprecated="auto",
         )
 
-    def password_login(
+    async def password_login(
         self,
         username: str,
         password: str,
     ) -> UserLoginSchema | None:
         user_profile = (
-            self.user_repository.get_user_by_username(
+            await self.user_repository.get_user_by_username(
                 username=username,
             )
         )
-        self._validate_user(
+        await self._validate_user(
             password=password,
             user_profile=user_profile,
         )
-        access_token = self.generate_jwt(
+        access_token = await self.generate_jwt(
             user_id=user_profile.id
         )
         return UserLoginSchema(
@@ -50,15 +50,17 @@ class AuthService:
             access_token=access_token,
         )
 
-    def oidc_login(
+    async def oidc_login(
         self,
         code: str,
         oidc_client: GoogleClient | YandexClient,
     ):
-        user_data = oidc_client.get_user_info(code=code)
+        user_data = await oidc_client.get_user_info(
+            code=code
+        )
         if not (
             user_profile_model
-            := self.user_repository.get_user_by_email(
+            := await self.user_repository.get_user_by_email(
                 email=user_data.email
             )
         ):
@@ -66,11 +68,11 @@ class AuthService:
                 **user_data.model_dump()
             )
             user_profile_model = (
-                self.user_repository.create_user(
+                await self.user_repository.create_user(
                     user_profile=user_profile
                 )
             )
-        access_token = self.generate_jwt(
+        access_token = await self.generate_jwt(
             user_id=user_profile_model.id
         )
         return UserLoginSchema(
@@ -78,13 +80,13 @@ class AuthService:
             access_token=access_token,
         )
 
-    def get_google_redirect_url(self) -> str:
+    async def get_google_redirect_url(self) -> str:
         return self.settings.GOOGLE_OIDC.google_redirect_url
 
-    def get_yandex_redirect_url(self) -> str:
+    async def get_yandex_redirect_url(self) -> str:
         return self.settings.YANDEX_OIDC.yandex_redirect_url
 
-    def generate_jwt(
+    async def generate_jwt(
         self,
         user_id: int,
     ) -> jwt.PyJWT:
@@ -97,7 +99,9 @@ class AuthService:
             headers=self.settings.AUTH_JWT.headers,
         )
 
-    def validate_jwt(self, token: str) -> dict[str, Any]:
+    async def validate_jwt(
+        self, token: str
+    ) -> dict[str, Any]:
         """
         Validates an access token. If the token is valid, it returns the token payload.
         """
@@ -113,25 +117,25 @@ class AuthService:
             leeway=timedelta(minutes=5),
         )
 
-    def _validate_user(
+    async def _validate_user(
         self,
         password: str,
         user_profile: UserProfile,
     ) -> None:
         if not user_profile:
             raise UserNotFoundError
-        if not self._verify_password(
+        if not await self._verify_password(
             plain_password=password,
             hashed_password=user_profile.hashed_password,
         ):
             raise IncorrectPasswordError
 
-    def _verify_password(
+    async def _verify_password(
         self,
         plain_password: str,
         hashed_password: str,
     ) -> bool:
-        return self.password_context.verify(
+        return await self.password_context.verify(
             secret=plain_password,
             hash=hashed_password,
         )

@@ -1,10 +1,9 @@
-from collections.abc import Generator
+from collections.abc import AsyncGenerator
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import (
-    Session,
-    scoped_session,
-    sessionmaker,
+from sqlalchemy.ext.asyncio import (
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
 )
 
 from config import settings
@@ -14,30 +13,22 @@ class DatabaseHelper:
     def __init__(
         self, url: str, echo: bool = False
     ) -> None:
-        self.engine = create_engine(
+        self.engine = create_async_engine(
             url=url,
             echo=echo,
         )
-        self.session_factory = sessionmaker(
+        self.session_factory = async_sessionmaker(
             bind=self.engine,
             autoflush=False,  # why?
             autocommit=False,  # why?
             expire_on_commit=False,  # why?: docs: "It’s also usually a good idea to set Session.expire_on_commit to False so that subsequent access to objects that came from a Session within the view layer do not need to emit new SQL queries to refresh the objects, if the transaction has been committed already."
         )
 
-    # check the explanation bellow
-    def get_scoped_db_session(self) -> Session:
-        session = scoped_session(
-            session_factory=self.session_factory,
-        )
-        return session
-
-    def get_db_session(
+    async def get_db_session(
         self,
-    ) -> Generator[Session, None]:
-        with self.session_factory() as session:
+    ) -> AsyncGenerator[AsyncSession, None]:
+        async with self.session_factory() as session:
             yield session
-            # session.close()
 
 
 db_helper = DatabaseHelper(

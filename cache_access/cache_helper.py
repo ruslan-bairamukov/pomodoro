@@ -1,4 +1,4 @@
-import redis
+from redis import asyncio as redis
 
 from config import settings
 
@@ -18,7 +18,7 @@ class CacheHelper:
         # self.username = username
         # self.password = password
 
-    def get_redis(self) -> redis.Redis:
+    async def get_redis(self) -> redis.Redis:
         return redis.Redis(
             host=self.host,
             port=self.port,
@@ -27,14 +27,14 @@ class CacheHelper:
             # password=self.password,
         )
 
-    def set_pomo(self) -> int:
-        redis = self.get_redis()
-        redis.set(
+    async def set_pomo(self) -> int:
+        redis = await self.get_redis()
+        await redis.set(
             name="task:pomodoro_count",
             value=1,
             ex=300,
         )
-        return redis.get("task:pomodoro_count")
+        return await redis.get("task:pomodoro_count")
 
     def test_connection(self) -> None:
         try:

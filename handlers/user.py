@@ -27,6 +27,6 @@ async def create_user(
         username=form_data.username,
         password=form_data.password,
     )
-    return user_service.create_user(
+    return await user_service.create_user(
         user_in=user_in,
     )

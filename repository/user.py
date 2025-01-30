@@ -1,60 +1,54 @@
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from models import UserProfile
 from schemas import UserProfileSchema
 
 
 class UserRepository:
-    def __init__(self, db_session: Session) -> None:
+    def __init__(self, db_session: AsyncSession) -> None:
         self.db_session = db_session
 
-    def create_user(
+    async def create_user(
         self, user_profile: UserProfileSchema
     ) -> UserProfile:
         user_profile_model = UserProfile(
             **user_profile.model_dump()
         )
-        with self.db_session as session:
+        async with self.db_session as session:
             session.add(user_profile_model)
-            session.commit()
-            session.refresh(user_profile_model)
+            await session.commit()
+            await session.refresh(user_profile_model)
         return user_profile_model
 
-    def get_user_by_id(
+    async def get_user_by_id(
         self, user_id: int
     ) -> UserProfile | None:
         query = select(UserProfile).where(
             UserProfile.id == user_id
         )
-        with self.db_session as session:
-            user_profile = session.execute(
-                query
-            ).scalar_one_or_none()
-        return user_profile
+        async with self.db_session as session:
+            user_profile = await session.execute(query)
+        return user_profile.scalar_one_or_none()
 
-    def get_user_by_email(
+    async def get_user_by_email(
         self,
         email: str,
     ) -> UserProfile | None:
         query = select(UserProfile).where(
             UserProfile.email == email
         )
-        with self.db_session as session:
-            user_profile = session.execute(
-                query
-            ).scalar_one_or_none()
-        return user_profile
+        async with self.db_session as session:
+            user_profile = await session.execute(query)
+        return user_profile.scalar_one_or_none()
 
-    def get_user_by_username(
+    async def get_user_by_username(
         self,
         username: str,
     ) -> UserProfile | None:
         query = select(UserProfile).where(
             UserProfile.username == username
         )
-        with self.db_session as session:
-            user_profile = session.execute(
-                query
-            ).scalar_one_or_none()
-        return user_profile
+        async with self.db_session as session:
+            user_profile = await session.execute(query)
+        return user_profile.scalar_one_or_none()

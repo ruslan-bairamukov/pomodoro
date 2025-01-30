@@ -34,6 +34,7 @@ class SQLITEDbSettings(BaseSettings):
 class PSQLDbSettings(BaseSettings):
     model_config = BASE_MODEL_CONFIG
 
+    PSQL_ASYNC_DRIVER: str
     PSQL_DIALECT: str
     PSQL_DRIVER: str
     PSQL_ECHO: bool
@@ -45,7 +46,7 @@ class PSQLDbSettings(BaseSettings):
 
     @property
     def url(self) -> str:
-        return f"{self.PSQL_DIALECT}+{self.PSQL_DRIVER}://{self.PSQL_USER}:{self.PSQL_USER_PASSWORD}@{self.PSQL_HOST}:{self.PSQL_PORT}/{self.PSQL_NAME}"
+        return f"{self.PSQL_DIALECT}+{self.PSQL_ASYNC_DRIVER}://{self.PSQL_USER}:{self.PSQL_USER_PASSWORD}@{self.PSQL_HOST}:{self.PSQL_PORT}/{self.PSQL_NAME}"
 
 
 class RedisSettings(BaseSettings):

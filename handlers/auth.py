@@ -38,7 +38,7 @@ async def password_login(
     ],
 ) -> UserLoginSchema:
     try:
-        return auth_service.password_login(
+        return await auth_service.password_login(
             username=form_data.username,
             password=form_data.password,
         )
@@ -58,12 +58,14 @@ async def password_login(
     "/login/google",
     response_class=RedirectResponse,
 )
-def google_login(
+async def google_login(
     auth_service: Annotated[
         AuthService, Depends(get_auth_service)
     ],
 ) -> RedirectResponse:
-    redirect_url = auth_service.get_google_redirect_url()
+    redirect_url = (
+        await auth_service.get_google_redirect_url()
+    )
     print(f"\n\n{redirect_url = }\n\n")
     return RedirectResponse(url=redirect_url)
 
@@ -71,7 +73,7 @@ def google_login(
 @router.get(
     "/google",
 )
-def google_auth(
+async def google_auth(
     auth_service: Annotated[
         AuthService, Depends(get_auth_service)
     ],
@@ -80,7 +82,7 @@ def google_auth(
         GoogleClient, Depends(get_google_client)
     ],
 ):
-    return auth_service.oidc_login(
+    return await auth_service.oidc_login(
         code=code,
         oidc_client=google_client,
     )
@@ -90,12 +92,14 @@ def google_auth(
     "/login/yandex",
     response_class=RedirectResponse,
 )
-def yandex_login(
+async def yandex_login(
     auth_service: Annotated[
         AuthService, Depends(get_auth_service)
     ],
 ) -> RedirectResponse:
-    redirect_url = auth_service.get_yandex_redirect_url()
+    redirect_url = (
+        await auth_service.get_yandex_redirect_url()
+    )
     print(f"\n\n{redirect_url = }\n\n")
     return RedirectResponse(url=redirect_url)
 
@@ -103,7 +107,7 @@ def yandex_login(
 @router.get(
     "/yandex",
 )
-def yandex_auth(
+async def yandex_auth(
     auth_service: Annotated[
         AuthService, Depends(get_auth_service)
     ],
@@ -112,7 +116,7 @@ def yandex_auth(
         GoogleClient, Depends(get_yandex_client)
     ],
 ):
-    return auth_service.oidc_login(
+    return await auth_service.oidc_login(
         code=code,
         oidc_client=yandex_client,
     )

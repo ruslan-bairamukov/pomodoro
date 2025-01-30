@@ -22,19 +22,19 @@ class UserService:
             deprecated="auto",
         )
 
-    def create_user(
+    async def create_user(
         self,
         user_in: UserCreateSchema,
     ) -> UserLoginSchema:
-        user_profile = self._create_user_profile(
+        user_profile = await self._create_user_profile(
             user_in=user_in
         )
         user_profile_model = (
-            self.user_repository.create_user(
+            await self.user_repository.create_user(
                 user_profile=user_profile,
             )
         )
-        access_token = self.auth_service.generate_jwt(
+        access_token = await self.auth_service.generate_jwt(
             user_id=user_profile_model.id
         )
         return UserLoginSchema(
@@ -42,11 +42,11 @@ class UserService:
             access_token=access_token,
         )
 
-    def _create_user_profile(
+    async def _create_user_profile(
         self,
         user_in: UserCreateSchema,
     ) -> UserProfileSchema:
-        hashed_password = self._get_password_hash(
+        hashed_password = await self._get_password_hash(
             password=user_in.password
         )
         return UserProfileSchema(
@@ -57,7 +57,7 @@ class UserService:
             hashed_password=hashed_password,
         )
 
-    def _get_password_hash(
+    async def _get_password_hash(
         self, password: str | bytes
     ) -> str:
-        return self.password_context.hash(password)
+        return await self.password_context.hash(password)

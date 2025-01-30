@@ -7,9 +7,9 @@ class TaskCache:
     def __init__(self, redis: Redis) -> None:
         self.redis = redis
 
-    def get_tasks(self) -> list[TaskSchema]:
-        with self.redis as redis:
-            tasks_json = redis.lrange(
+    async def get_tasks(self) -> list[TaskSchema]:
+        async with self.redis as redis:
+            tasks_json = await redis.lrange(
                 name="tasks",
                 start=0,
                 end=-1,
@@ -19,12 +19,14 @@ class TaskCache:
             for task_json in tasks_json
         ]
 
-    def set_tasks(self, tasks: list[TaskSchema]) -> None:
+    async def set_tasks(
+        self, tasks: list[TaskSchema]
+    ) -> None:
         tasks_json = (
             task.model_dump_json() for task in tasks
         )
         """
         TODO add expiration params for data being saved in Redis 
         """
-        with self.redis as redis:
-            redis.lpush("tasks", *tasks_json)
+        async with self.redis as redis:
+            await redis.lpush("tasks", *tasks_json)

@@ -1,26 +1,39 @@
-from sqlalchemy import and_, delete, select, update
-from sqlalchemy.orm import Session
+from fastapi import HTTPException, status
+from sqlalchemy import and_, delete, select, text, update
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from models import Categories, Tasks
 from schemas import TaskCreateSchema
 
 
 class TaskRepository:
-    def __init__(self, db_session: Session) -> None:
+    def __init__(self, db_session: AsyncSession) -> None:
         self.db_session = db_session
 
-    def get_tasks(
+    async def ping_db(self) -> dict[str, str]:
+        async with self.db_session as session:
+            try:
+                await session.execute(text("select 1"))
+            except IntegrityError:
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="Database is unavailable",
+                )
+            return {"message": "db is working"}
+
+    async def get_tasks(
         self,
         user_id: int,
     ) -> list[Tasks] | None:
         query = select(Tasks).where(
             Tasks.user_id == user_id
         )
-        with self.db_session as session:
-            tasks = session.execute(query).scalars().all()
-        return tasks
+        async with self.db_session as session:
+            tasks = await session.execute(query)
+        return tasks.scalars().all()
 
-    def get_task_by_id(
+    async def get_task_by_id(
         self,
         task_id: int,
         user_id: int,
@@ -31,13 +44,11 @@ class TaskRepository:
                 Tasks.user_id == user_id,
             )
         )
-        with self.db_session as session:
-            response = session.execute(
-                query
-            ).scalar_one_or_none()
-        return response
+        async with self.db_session as session:
+            response = await session.execute(query)
+        return response.scalar_one_or_none()
 
-    def get_tasks_by_category_name(
+    async def get_tasks_by_category_name(
         self,
         category_name: str,
         user_id: int,
@@ -55,11 +66,11 @@ class TaskRepository:
                 )
             )
         )
-        with self.db_session as session:
-            tasks = session.execute(query).scalars().all()
-        return tasks
+        async with self.db_session as session:
+            tasks = await session.execute(query)
+        return tasks.scalars().all()
 
-    def create_task(
+    async def create_task(
         self,
         task_in: TaskCreateSchema,
         user_id: int,
@@ -68,13 +79,13 @@ class TaskRepository:
             **task_in.model_dump(),
             user_id=user_id,
         )
-        with self.db_session as session:
+        async with self.db_session as session:
             session.add(task_model)
-            session.commit()
-            session.refresh(task_model)
+            await session.commit()
+            await session.refresh(task_model)
         return task_model
 
-    def update_task(
+    async def update_task(
         self,
         task_id: int,
         task_update: TaskCreateSchema,
@@ -92,16 +103,16 @@ class TaskRepository:
                 **task_update.model_dump(exclude_unset=True)
             )
         )
-        with self.db_session as session:
-            session.execute(query)
-            session.commit()
-        task_model = self.get_task_by_id(
+        async with self.db_session as session:
+            await session.execute(query)
+            await session.commit()
+        task_model = await self.get_task_by_id(
             task_id=task_id,
             user_id=user_id,
         )
         return task_model
 
-    def delete_task(
+    async def delete_task(
         self,
         task_id: int,
         user_id: int,
@@ -112,6 +123,6 @@ class TaskRepository:
                 Tasks.user_id == user_id,
             )
         )
-        with self.db_session as session:
-            session.execute(query)
-            session.commit()
+        async with self.db_session as session:
+            await session.execute(query)
+            await session.commit()
