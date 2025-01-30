@@ -4,7 +4,7 @@ from typing import Any
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.x509 import load_pem_x509_certificate
-from pydantic import SecretStr, computed_field
+from pydantic import computed_field
 from pydantic_settings import (
     BaseSettings,
     SettingsConfigDict,
@@ -122,14 +122,47 @@ class AuthJWT(BaseSettings):
         ).public_key()
 
 
+class GoogleOIDC(BaseSettings):
+    model_config = BASE_MODEL_CONFIG
+
+    GOOGLE_CLIENT_ID: str
+    PROJECT_ID: str
+    GOOGLE_AUT_URI: str
+    GOOGLE_TOKEN_URI: str
+    GOOGLE_TOKEN_URL: str
+    AUTH_PROVIDER_X509_CERT_URL: str
+    GOOGLE_CLIENT_SECRET: str
+    GOOGLE_REDIRECT_URI: str
+
+    @computed_field
+    @property
+    def google_redirect_url(self) -> str:
+        return f"https://accounts.google.com/o/oauth2/auth?response_type=code&client_id={self.GOOGLE_CLIENT_ID}&redirect_uri={self.GOOGLE_REDIRECT_URI}&scope=openid%20profile%20email&access_type=offline"
+
+
+class YandexOIDC(BaseSettings):
+    model_config = BASE_MODEL_CONFIG
+
+    YANDEX_CLIENT_ID: str
+    YANDEX_CLIENT_SECRET: str
+    YANDEX_TOKEN_URL: str
+    YANDEX_REDIRECT_URI: str
+
+    @computed_field
+    @property
+    def yandex_redirect_url(self) -> str:
+        return f"https://oauth.yandex.ru/authorize?response_type=code&client_id={self.YANDEX_CLIENT_ID}&force_confirm=yes"
+
+
 class Settings(BaseSettings):
     model_config = BASE_MODEL_CONFIG
 
-    GOOGLE_TOKEN_ID: SecretStr
     AUTH_JWT: AuthJWT = AuthJWT()
     PSQL_DB: PSQLDbSettings = PSQLDbSettings()
     SQLITEDB: SQLITEDbSettings = SQLITEDbSettings()
     REDIS: RedisSettings = RedisSettings()
+    GOOGLE_OIDC: GoogleOIDC = GoogleOIDC()
+    YANDEX_OIDC: YandexOIDC = YandexOIDC()
 
 
 settings = Settings()

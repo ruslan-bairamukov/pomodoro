@@ -33,6 +33,19 @@ class UserRepository:
             ).scalar_one_or_none()
         return user_profile
 
+    def get_user_by_email(
+        self,
+        email: str,
+    ) -> UserProfile | None:
+        query = select(UserProfile).where(
+            UserProfile.email == email
+        )
+        with self.db_session as session:
+            user_profile = session.execute(
+                query
+            ).scalar_one_or_none()
+        return user_profile
+
     def get_user_by_username(
         self,
         username: str,

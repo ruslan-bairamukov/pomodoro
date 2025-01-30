@@ -6,7 +6,6 @@ from fastapi import (
     HTTPException,
     status,
 )
-from fastapi.security import OAuth2PasswordBearer
 
 from dependencies import (
     get_current_user_id,
@@ -20,9 +19,6 @@ router = APIRouter(
     prefix="/tasks",
     tags=["task"],
 )
-
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 
 
 @router.get(

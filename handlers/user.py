@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends
 from fastapi.security import OAuth2PasswordRequestForm
 
 from dependencies import get_user_service
-from schemas import UserInSchema, UserLoginSchema
+from schemas import UserCreateSchema, UserLoginSchema
 from service import UserService
 
 router = APIRouter(prefix="/user", tags=["user"])
@@ -23,7 +23,7 @@ async def create_user(
     ],
 ) -> UserLoginSchema:
     # TODO: add try-except to handle SQLAlchemy exception: not unique username
-    user_in: UserInSchema = UserInSchema(
+    user_in: UserCreateSchema = UserCreateSchema(
         username=form_data.username,
         password=form_data.password,
     )

@@ -2,7 +2,7 @@ from passlib.context import CryptContext
 
 from repository import UserRepository
 from schemas import (
-    UserInSchema,
+    UserCreateSchema,
     UserLoginSchema,
     UserProfileSchema,
 )
@@ -24,7 +24,7 @@ class UserService:
 
     def create_user(
         self,
-        user_in: UserInSchema,
+        user_in: UserCreateSchema,
     ) -> UserLoginSchema:
         user_profile = self._create_user_profile(
             user_in=user_in
@@ -44,13 +44,16 @@ class UserService:
 
     def _create_user_profile(
         self,
-        user_in: UserInSchema,
+        user_in: UserCreateSchema,
     ) -> UserProfileSchema:
         hashed_password = self._get_password_hash(
             password=user_in.password
         )
         return UserProfileSchema(
-            username=user_in.username,
+            **user_in.model_dump(
+                exclude=UserCreateSchema.password,
+                exclude_none=True,
+            ),
             hashed_password=hashed_password,
         )
 

@@ -2,11 +2,16 @@ from typing import Annotated, Any
 
 import jwt
 from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import (
+    HTTPBearer,
+    OAuth2PasswordBearer,
+)
 from redis import Redis
 from sqlalchemy.orm import Session
 
 from cache_access import cache_helper
+from clients import GoogleClient, YandexClient
+from config import settings
 from data_access import db_helper
 from exceptions import InvalidJWTTokenError
 from repository import (
@@ -16,7 +21,7 @@ from repository import (
 )
 from service import AuthService, TaskService, UserService
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
+oauth2_scheme = HTTPBearer()
 
 
 def get_tasks_repository(
@@ -63,15 +68,21 @@ def get_user_repository(
     )
 
 
+def get_google_client() -> GoogleClient:
+    return GoogleClient(settings=settings)
+
+
+def get_yandex_client() -> YandexClient:
+    return YandexClient(settings=settings)
+
+
 def get_auth_service(
     user_repository: Annotated[
         UserRepository,
         Depends(get_user_repository),
     ],
 ) -> AuthService:
-    return AuthService(
-        user_repository=user_repository,
-    )
+    return AuthService(user_repository=user_repository)
 
 
 def get_user_service(
@@ -98,7 +109,9 @@ def get_jwt_payload(
     ],
 ) -> dict[str, Any]:
     try:
-        return auth_service.validate_jwt(token=token)
+        return auth_service.validate_jwt(
+            token=token.credentials
+        )
     except jwt.PyJWTError:
         raise InvalidJWTTokenError
 

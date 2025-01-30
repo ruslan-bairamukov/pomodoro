@@ -4,30 +4,31 @@ from typing import Any
 import jwt
 from passlib.context import CryptContext
 
-from config import AuthJWT, settings
+from clients import GoogleClient, YandexClient
+from config import Settings, settings
 from exceptions import (
     IncorrectPasswordError,
     UserNotFoundError,
 )
 from models import UserProfile
 from repository import UserRepository
-from schemas import UserLoginSchema
+from schemas import UserLoginSchema, UserProfileSchema
 
 
 class AuthService:
     def __init__(
         self,
         user_repository: UserRepository,
-        jwt_data: AuthJWT = settings.AUTH_JWT,
+        settings: Settings = settings,
     ) -> None:
         self.user_repository = user_repository
-        self.jwt_data = jwt_data
+        self.settings = settings
         self.password_context: CryptContext = CryptContext(
             schemes=["bcrypt"],
             deprecated="auto",
         )
 
-    def login_for_access_token(
+    def password_login(
         self,
         username: str,
         password: str,
@@ -49,17 +50,51 @@ class AuthService:
             access_token=access_token,
         )
 
+    def oidc_login(
+        self,
+        code: str,
+        oidc_client: GoogleClient | YandexClient,
+    ):
+        user_data = oidc_client.get_user_info(code=code)
+        if not (
+            user_profile_model
+            := self.user_repository.get_user_by_email(
+                email=user_data.email
+            )
+        ):
+            user_profile = UserProfileSchema(
+                **user_data.model_dump()
+            )
+            user_profile_model = (
+                self.user_repository.create_user(
+                    user_profile=user_profile
+                )
+            )
+        access_token = self.generate_jwt(
+            user_id=user_profile_model.id
+        )
+        return UserLoginSchema(
+            id=user_profile_model.id,
+            access_token=access_token,
+        )
+
+    def get_google_redirect_url(self) -> str:
+        return self.settings.GOOGLE_OIDC.google_redirect_url
+
+    def get_yandex_redirect_url(self) -> str:
+        return self.settings.YANDEX_OIDC.yandex_redirect_url
+
     def generate_jwt(
         self,
         user_id: int,
     ) -> jwt.PyJWT:
-        payload = self.jwt_data.payload.copy()
+        payload = self.settings.AUTH_JWT.payload.copy()
         payload.update({"sub": str(user_id)})
         return jwt.encode(
             payload=payload,
-            key=self.jwt_data.private_key,
-            algorithm=self.jwt_data.ALGORITHM,
-            headers=self.jwt_data.headers,
+            key=self.settings.AUTH_JWT.private_key,
+            algorithm=self.settings.AUTH_JWT.ALGORITHM,
+            headers=self.settings.AUTH_JWT.headers,
         )
 
     def validate_jwt(self, token: str) -> dict[str, Any]:
@@ -68,12 +103,14 @@ class AuthService:
         """
         return jwt.decode(
             jwt=token,
-            key=self.jwt_data.public_key,
-            algorithms=[self.jwt_data.ALGORITHM],
-            audience=self.jwt_data.AUDIENCE,
-            issuer=self.jwt_data.ISSUER,
-            subject=self.jwt_data.SUBJECT,
-            leeway=timedelta(minutes=3),
+            key=self.settings.AUTH_JWT.public_key,
+            algorithms=[
+                self.settings.AUTH_JWT.ALGORITHM,
+            ],
+            audience=self.settings.AUTH_JWT.AUDIENCE,
+            issuer=self.settings.AUTH_JWT.ISSUER,
+            subject=self.settings.AUTH_JWT.SUBJECT,
+            leeway=timedelta(minutes=5),
         )
 
     def _validate_user(

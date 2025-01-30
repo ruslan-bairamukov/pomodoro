@@ -1,14 +1,17 @@
-from schemas.task import TaskCreateSchema, TaskSchema
-from schemas.user import (
-    UserInSchema,
+from schemas.auth import (
+    GoogleUserData,
     UserLoginSchema,
-    UserProfileSchema,
+    YandexUserData,
 )
+from schemas.task import TaskCreateSchema, TaskSchema
+from schemas.user import UserCreateSchema, UserProfileSchema
 
 __all__ = [
+    "GoogleUserData",
     "TaskCreateSchema",
     "TaskSchema",
-    "UserInSchema",
+    "UserCreateSchema",
     "UserLoginSchema",
     "UserProfileSchema",
+    "YandexUserData",
 ]
